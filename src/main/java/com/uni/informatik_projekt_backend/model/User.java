@@ -1,6 +1,7 @@
 package com.uni.informatik_projekt_backend.model;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.persistence.*;
 import java.util.Date;
 import java.util.UUID;
@@ -21,6 +22,7 @@ public class User {
 
     @Column(name = "password_hash", nullable = false)
     @JsonProperty(value = "password", access = JsonProperty.Access.WRITE_ONLY)
+    @Schema(name = "password", type = "string", format = "password", description = "User password (write-only, never returned)")
     private String passwordHash;
 
     @Column(nullable = false)

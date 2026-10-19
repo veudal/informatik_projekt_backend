@@ -2,6 +2,7 @@ package com.uni.informatik_projekt_backend.controller;
 
 import com.uni.informatik_projekt_backend.model.*;
 import com.uni.informatik_projekt_backend.repository.*;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -9,6 +10,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 
+@SecurityRequirement(name = "bearerAuth")
 @RestController
 @RequestMapping("/api")
 public class ApiController {
