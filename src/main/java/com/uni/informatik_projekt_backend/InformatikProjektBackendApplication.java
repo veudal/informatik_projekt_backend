@@ -1,6 +1,5 @@
 package com.uni.informatik_projekt_backend;
 
-import com.uni.informatik_projekt_backend.controller.FamilyController;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
