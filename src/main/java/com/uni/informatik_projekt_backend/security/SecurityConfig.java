@@ -30,7 +30,7 @@ public class SecurityConfig {
     private UserDetailsService userDetailsService;
 
     /**
-     * Stateless security filter chain:
+     * Rules:
      *  - /api/auth/** and Swagger docs are public
      *  - everything else requires a valid JWT
      *  - CSRF disabled (stateless API for Flutter)
@@ -46,6 +46,7 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/api/auth/register",
                                 "/api/auth/login",
+                                "/api/families",
                                 "/v3/api-docs/**",
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",

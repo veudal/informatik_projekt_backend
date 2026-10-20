@@ -1,5 +1,6 @@
 package com.uni.informatik_projekt_backend.controller;
 
+import com.uni.informatik_projekt_backend.model.LoginUser;
 import com.uni.informatik_projekt_backend.model.User;
 import com.uni.informatik_projekt_backend.repository.UserRepository;
 import com.uni.informatik_projekt_backend.security.CustomUserDetailsService;
@@ -53,12 +54,10 @@ public class AuthController {
      * Spring Security compares plaintext against stored BCrypt hash.
      */
     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody User login) {
-        // passwordHash temporarily holds the plaintext password from the JSON request
-        String plainPassword = login.getPasswordHash();
+    public ResponseEntity<?> login(@RequestBody LoginUser login) {
         try {
             authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(login.getEmail(), plainPassword));
+                    new UsernamePasswordAuthenticationToken(login.getEmail(), login.getPassword()));
         } catch (Exception e) {
             return ResponseEntity.status(401).body(Map.of("error", "Invalid email or password"));
         }

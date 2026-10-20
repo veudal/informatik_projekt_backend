@@ -15,6 +15,7 @@ public class User {
     private UUID id;
 
     @Column(name = "family_id")
+    @Schema(example = "null")
     private UUID familyId;
 
     @Column(unique = true, nullable = false)
