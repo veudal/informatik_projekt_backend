@@ -27,6 +27,11 @@ public class ApiController {
         return familyRepository.findAll();
     }
 
+    @GetMapping("/families/count")
+    public long getFamilyCount() {
+        return familyRepository.count();
+    }
+
     private User getCurrentUser() {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
         return userRepository.findByEmail(email)
