@@ -1,0 +1,21 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="InformatikProjektBackendApplication" type="Application" factoryName="Application" nameIsGenerated="true">
+    <envs>
+      <env name="DB_CONNECTION_STRING" value="jdbc:postgresql://postgres.mhjtwcwvdtlsvefdnzjk:Judo4-Cleft7-Audibly1-Replica8-Snooze8@aws-1-eu-central-1.pooler.supabase.com:5432/postgres?sslmode=require" />
+    </envs>
+    <option name="envFilePaths">
+      <option value="$PROJECT_DIR$/.env" />
+    </option>
+    <option name="MAIN_CLASS_NAME" value="com.uni.informatik_projekt_backend.InformatikProjektBackendApplication" />
+    <module name="informatik_projekt_backend" />
+    <extension name="coverage">
+      <pattern>
+        <option name="PATTERN" value="com.uni.informatik_projekt_backend.*" />
+        <option name="ENABLED" value="true" />
+      </pattern>
+    </extension>
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>
