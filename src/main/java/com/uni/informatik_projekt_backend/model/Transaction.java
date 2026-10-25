@@ -1,7 +1,8 @@
 package com.uni.informatik_projekt_backend.model;
 
 import jakarta.persistence.*;
-import java.util.Date;
+import org.hibernate.annotations.CreationTimestamp;
+import java.time.Instant;
 import java.util.UUID;
 
 @Entity
@@ -12,17 +13,17 @@ public class Transaction {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @Column(name = "family_id", nullable = false)
-    private UUID familyId;
+    @Column(name = "family_wallet_id", nullable = false)
+    private UUID familyWalletId;
 
     @Column(name = "wallet_id", nullable = false)
     private UUID walletId;
 
     @Column(name = "amount_cents", nullable = false)
-    private Long amountCents; // + deposit, - withdrawal
+    private Long amountCents;
 
-    @Column(columnDefinition = "TEXT DEFAULT 'manual'")
-    private String kind;
+    @Column(nullable = false)
+    private String kind; // 'manual', 'allowance', 'task_reward', 'goal_contribution', 'transfer', 'payout'
 
     @Column(columnDefinition = "TEXT")
     private String note;
@@ -30,8 +31,12 @@ public class Transaction {
     @Column(name = "created_by")
     private UUID createdBy;
 
-    @Column(name = "created_at")
-    private Date createdAt;
+    @Column(name = "family_id", nullable = false)
+    private UUID familyId;
+
+    @CreationTimestamp
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private Instant createdAt;
 
     public Transaction() {}
 
@@ -41,6 +46,14 @@ public class Transaction {
 
     public void setId(UUID id) {
         this.id = id;
+    }
+
+    public UUID getFamilyWalletId() {
+        return familyWalletId;
+    }
+
+    public void setFamilyWalletId(UUID familyWalletId) {
+        this.familyWalletId = familyWalletId;
     }
 
     public UUID getFamilyId() {
@@ -91,11 +104,7 @@ public class Transaction {
         this.createdBy = createdBy;
     }
 
-    public Date getCreatedAt() {
+    public Instant getCreatedAt() {
         return createdAt;
-    }
-
-    public void setCreatedAt(Date createdAt) {
-        this.createdAt = createdAt;
     }
 }

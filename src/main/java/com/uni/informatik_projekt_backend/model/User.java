@@ -3,7 +3,9 @@ package com.uni.informatik_projekt_backend.model;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.persistence.*;
-import java.util.Date;
+import org.hibernate.annotations.CreationTimestamp;
+import java.time.LocalDate;
+import java.time.Instant;
 import java.util.UUID;
 
 @Entity
@@ -14,26 +16,30 @@ public class User {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @Column(name = "family_id")
+    @Column(name = "family_id", nullable = false)
     @Schema(example = "null")
     private UUID familyId;
-
-    @Column(unique = true, nullable = false)
-    private String email;
-
-    @Column(name = "password_hash", nullable = false)
-    @JsonProperty(value = "password", access = JsonProperty.Access.WRITE_ONLY)
-    @Schema(name = "password", type = "string", format = "password", description = "User password (write-only, never returned)")
-    private String passwordHash;
-
-    @Column(nullable = false)
-    private String role; // 'parent' or 'child'
 
     @Column(name = "display_name", nullable = false)
     private String displayName;
 
-    @Column(name = "created_at")
-    private Date createdAt;
+    @Column(nullable = false)
+    private String role; // 'admin', 'active', or 'passive'
+
+    @Column(name = "birth_date")
+    private LocalDate birthDate;
+
+    @Column(unique = true)
+    private String email;
+
+    @Column(name = "password_hash")
+    @JsonProperty(value = "password", access = JsonProperty.Access.WRITE_ONLY)
+    @Schema(name = "password", type = "string", format = "password", description = "User password (write-only, never returned)")
+    private String passwordHash;
+
+    @CreationTimestamp
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private Instant createdAt;
 
     public User() {}
 
@@ -85,11 +91,15 @@ public class User {
         this.displayName = displayName;
     }
 
-    public Date getCreatedAt() {
-        return createdAt;
+    public LocalDate getBirthDate() {
+        return birthDate;
     }
 
-    public void setCreatedAt(Date createdAt) {
-        this.createdAt = createdAt;
+    public void setBirthDate(LocalDate birthDate) {
+        this.birthDate = birthDate;
+    }
+
+    public Instant getCreatedAt() {
+        return createdAt;
     }
 }

@@ -34,16 +34,15 @@ public class AuthController {
      */
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody User user) {
-        if (userRepository.existsByEmail(user.getEmail())) {
+        if (user.getEmail() != null && userRepository.existsByEmail(user.getEmail())) {
             return ResponseEntity.badRequest().body(Map.of("error", "Email already registered"));
         }
-        if (!user.getRole().equals("parent") && !user.getRole().equals("child")) {
-            return ResponseEntity.badRequest().body(Map.of("error", "Role must be parent or child"));
+        if (!user.getRole().equals("admin") && !user.getRole().equals("active") && !user.getRole().equals("passive")) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Role must be admin, active, or passive"));
         }
         // passwordHash temporarily holds the plaintext password from the JSON request
         String plainPassword = user.getPasswordHash();
         user.setPasswordHash(passwordEncoder.encode(plainPassword));
-        user.setCreatedAt(new Date());
         User saved = userRepository.save(user);
         UserDetails details = userDetailsService.loadUserByUsername(user.getEmail());
         return ResponseEntity.ok(Map.of("token", jwtUtil.generateToken(details), "user", saved));

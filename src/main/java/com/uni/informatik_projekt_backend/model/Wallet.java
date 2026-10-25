@@ -1,7 +1,8 @@
 package com.uni.informatik_projekt_backend.model;
 
 import jakarta.persistence.*;
-import java.util.Date;
+import org.hibernate.annotations.CreationTimestamp;
+import java.time.Instant;
 import java.util.UUID;
 
 @Entity
@@ -15,17 +16,27 @@ public class Wallet {
     @Column(name = "family_id", nullable = false)
     private UUID familyId;
 
-    @Column(name = "owner_id", nullable = false)
+    @Column(name = "owner_id")
     private UUID ownerId;
 
-    @Column(nullable = false, columnDefinition = "TEXT DEFAULT 'Spending'")
+    @Column(nullable = false)
+    private String kind; // 'family' or 'member'
+
+    @Column(nullable = false)
     private String name;
 
-    @Column(nullable = false, columnDefinition = "TEXT DEFAULT 'EUR'")
+    @Column(nullable = false)
     private String currency;
 
-    @Column(name = "created_at")
-    private Date createdAt;
+    @Column(name = "bank_name")
+    private String bankName;
+
+    @Column(name = "balance_cents")
+    private Long balanceCents;
+
+    @CreationTimestamp
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private Instant createdAt;
 
     public Wallet() {}
 
@@ -69,11 +80,31 @@ public class Wallet {
         this.currency = currency;
     }
 
-    public Date getCreatedAt() {
-        return createdAt;
+    public String getKind() {
+        return kind;
     }
 
-    public void setCreatedAt(Date createdAt) {
-        this.createdAt = createdAt;
+    public void setKind(String kind) {
+        this.kind = kind;
+    }
+
+    public String getBankName() {
+        return bankName;
+    }
+
+    public void setBankName(String bankName) {
+        this.bankName = bankName;
+    }
+
+    public Long getBalanceCents() {
+        return balanceCents;
+    }
+
+    public void setBalanceCents(Long balanceCents) {
+        this.balanceCents = balanceCents;
+    }
+
+    public Instant getCreatedAt() {
+        return createdAt;
     }
 }
