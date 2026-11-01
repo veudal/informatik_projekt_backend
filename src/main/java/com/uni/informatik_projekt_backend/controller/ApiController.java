@@ -7,6 +7,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
+
+import javax.net.ssl.SSLEngineResult;
 import java.util.List;
 import java.util.UUID;
 
@@ -25,6 +27,9 @@ public class ApiController {
     @Autowired private RecurringTransferRepository recurringTransferRepository;
     @Autowired private PayoutRequestRepository payoutRequestRepository;
     @Autowired private FamilyWalletRepository familyWalletRepository;
+
+    @GetMapping("/health")
+    public String health() { return "OK"; }
 
     @GetMapping("/families")
     public List<Family> getFamilies() {

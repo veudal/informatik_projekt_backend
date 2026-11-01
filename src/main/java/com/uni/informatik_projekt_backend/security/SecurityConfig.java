@@ -45,6 +45,7 @@ public class SecurityConfig {
                                 "/api/auth/login",
                                 "/api/families",
                                 "/api/families/count",
+                                "/api/health",
                                 "/v3/api-docs/**",
                                 "/swagger-ui/**",
                                 "/swagger-ui.html"
