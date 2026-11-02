@@ -2,13 +2,17 @@ package com.uni.informatik_projekt_backend.controller;
 
 import com.uni.informatik_projekt_backend.model.*;
 import com.uni.informatik_projekt_backend.repository.*;
+import io.jsonwebtoken.Jwt;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
-
-import javax.net.ssl.SSLEngineResult;
+import org.springframework.web.server.ResponseStatusException;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jws;
 import java.util.List;
 import java.util.UUID;
 
@@ -31,9 +35,13 @@ public class ApiController {
     @GetMapping("/health")
     public String health() { return "OK"; }
 
-    @GetMapping("/families")
-    public List<Family> getFamilies() {
-        return familyRepository.findAll();
+    @GetMapping("/family")
+    public Family getMyFamily() {
+        var id = getCurrentUser().getFamilyId();
+        if(id == null){
+            return null;
+        }
+        return familyRepository.findById(id).orElse(null);
     }
 
     @GetMapping("/families/count")
