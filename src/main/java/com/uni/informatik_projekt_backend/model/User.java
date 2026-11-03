@@ -37,6 +37,10 @@ public class User {
     @Schema(name = "password", type = "string", format = "password", description = "User password (write-only, never returned)")
     private String passwordHash;
 
+    @Column(name = "email_verified", nullable = false)
+    @JsonProperty("emailVerified")
+    private boolean emailVerified = false;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
@@ -97,6 +101,14 @@ public class User {
 
     public void setBirthDate(LocalDate birthDate) {
         this.birthDate = birthDate;
+    }
+
+    public boolean isEmailVerified() {
+        return emailVerified;
+    }
+
+    public void setEmailVerified(boolean emailVerified) {
+        this.emailVerified = emailVerified;
     }
 
     public Instant getCreatedAt() {

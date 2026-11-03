@@ -65,6 +65,17 @@ public class AuthController {
         return ResponseEntity.ok(Map.of("token", jwtUtil.generateToken(details), "user", user));
     }
 
+    @GetMapping("/check-email")
+    public ResponseEntity<?> checkEmailExists(@RequestParam("email") String email) {
+        boolean exists = userRepository.existsByEmail(email);
+
+        if (exists) {
+            return ResponseEntity.ok().build();
+        } else {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
     /**
      * Requires valid JWT. Lists all users (passwords never exposed).
      */
