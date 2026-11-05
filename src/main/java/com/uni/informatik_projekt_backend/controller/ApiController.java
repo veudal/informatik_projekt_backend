@@ -111,8 +111,14 @@ public class ApiController {
 
     @GetMapping("/transactions/family-wallet/{familyWalletId}")
     public List<Transaction> getTransactionsByFamilyWallet(@PathVariable UUID familyWalletId) {
-        // Optional kannst du hier noch verifyUserBelongsToFamily() einbauen
-        return transactionRepository.findByFamilyWalletId(familyWalletId);
+        var familyWallet = familyWalletRepository.findById(familyWalletId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Family wallet not found"));
+        verifyUserBelongsToFamily(familyWallet.getFamilyId());
+
+        // NEU: Nur Transaktionen vom Typ 'transfer' (Ein- und Auszahlungen) zurückgeben
+        return transactionRepository.findByFamilyWalletId(familyWalletId).stream()
+                .filter(t -> "transfer".equals(t.getKind()))
+                .toList();
     }
 
     @PostMapping("/transactions")
@@ -130,12 +136,25 @@ public class ApiController {
                     "Personal and family wallets must belong to the same family");
         }
         verifyUserBelongsToFamily(familyWallet.getFamilyId());
+
+        User currentUser = getCurrentUser();
+        tx.setCreatedBy(currentUser.getId());
+
         tx.setWalletId(wallet.getId());
         tx.setFamilyWalletId(familyWallet.getId());
         tx.setFamilyId(familyWallet.getFamilyId());
         tx.setId(null);
         tx.setKind(tx.getKind() != null ? tx.getKind() : "manual");
-        return ResponseEntity.ok(transactionRepository.save(tx));
+
+        Transaction savedTx = transactionRepository.save(tx);
+
+        // NEU: Kontostand des Familienkontos automatisch aktualisieren!
+        long currentBalance = familyWallet.getBalanceCents() != null ? familyWallet.getBalanceCents() : 0L;
+        // Da eine Überweisung vom User negativ ist (z.B. -3200), erhöht sich das Guthaben des Familienkontos (Minus und Minus = Plus)
+        familyWallet.setBalanceCents(currentBalance - savedTx.getAmountCents());
+        familyWalletRepository.save(familyWallet);
+
+        return ResponseEntity.ok(savedTx);
     }
 
     // Goals endpoints
