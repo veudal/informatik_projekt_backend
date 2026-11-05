@@ -108,6 +108,12 @@ public class ApiController {
         return transactionRepository.findByWalletId(walletId);
     }
 
+    @GetMapping("/transactions/family-wallet/{familyWalletId}")
+    public List<Transaction> getTransactionsByFamilyWallet(@PathVariable UUID familyWalletId) {
+        // Optional kannst du hier noch verifyUserBelongsToFamily() einbauen
+        return transactionRepository.findByFamilyWalletId(familyWalletId);
+    }
+
     @PostMapping("/transactions")
     public ResponseEntity<Transaction> createTransaction(@RequestBody Transaction tx) {
         var wallet = walletRepository.findById(tx.getWalletId())
