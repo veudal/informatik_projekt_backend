@@ -58,7 +58,8 @@ public class ApiController {
     private void verifyUserBelongsToFamily(UUID familyId) {
         User currentUser = getCurrentUser();
         if (currentUser.getFamilyId() == null || !currentUser.getFamilyId().equals(familyId)) {
-            throw new RuntimeException("Access denied: You don't belong to this family");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Access denied: You don't belong to this family");
         }
     }
 
@@ -108,15 +109,52 @@ public class ApiController {
         return transactionRepository.findByWalletId(walletId);
     }
 
+    @GetMapping("/transactions/family-wallet/{familyWalletId}")
+    public List<Transaction> getTransactionsByFamilyWallet(@PathVariable UUID familyWalletId) {
+        var familyWallet = familyWalletRepository.findById(familyWalletId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Family wallet not found"));
+        verifyUserBelongsToFamily(familyWallet.getFamilyId());
+
+        // NEU: Nur Transaktionen vom Typ 'transfer' (Ein- und Auszahlungen) zurückgeben
+        return transactionRepository.findByFamilyWalletId(familyWalletId).stream()
+                .filter(t -> "transfer".equals(t.getKind()))
+                .toList();
+    }
+
     @PostMapping("/transactions")
     public ResponseEntity<Transaction> createTransaction(@RequestBody Transaction tx) {
+        if (tx.getWalletId() == null || tx.getFamilyWalletId() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Both walletId and familyWalletId are required");
+        }
         var wallet = walletRepository.findById(tx.getWalletId())
-                .orElseThrow(() -> new RuntimeException("Wallet not found"));
-        verifyUserBelongsToFamily(wallet.getFamilyId());
-        tx.setFamilyId(wallet.getFamilyId());
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Wallet not found"));
+        var familyWallet = familyWalletRepository.findById(tx.getFamilyWalletId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Family wallet not found"));
+        if (!wallet.getFamilyId().equals(familyWallet.getFamilyId())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Personal and family wallets must belong to the same family");
+        }
+        verifyUserBelongsToFamily(familyWallet.getFamilyId());
+
+        User currentUser = getCurrentUser();
+        tx.setCreatedBy(currentUser.getId());
+
+        tx.setWalletId(wallet.getId());
+        tx.setFamilyWalletId(familyWallet.getId());
+        tx.setFamilyId(familyWallet.getFamilyId());
         tx.setId(null);
         tx.setKind(tx.getKind() != null ? tx.getKind() : "manual");
-        return ResponseEntity.ok(transactionRepository.save(tx));
+
+        Transaction savedTx = transactionRepository.save(tx);
+
+        // NEU: Kontostand des Familienkontos automatisch aktualisieren!
+        long currentBalance = familyWallet.getBalanceCents() != null ? familyWallet.getBalanceCents() : 0L;
+        // Da eine Überweisung vom User negativ ist (z.B. -3200), erhöht sich das Guthaben des Familienkontos (Minus und Minus = Plus)
+        familyWallet.setBalanceCents(currentBalance - savedTx.getAmountCents());
+        familyWalletRepository.save(familyWallet);
+
+        return ResponseEntity.ok(savedTx);
     }
 
     // Goals endpoints

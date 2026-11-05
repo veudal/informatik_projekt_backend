@@ -9,8 +9,9 @@ import java.util.UUID;
 
 @Repository
 public interface TransactionRepository extends JpaRepository<Transaction, UUID> {
-
     List<Transaction> findByWalletId(UUID walletId);
-
     List<Transaction> findByFamilyId(UUID familyId);
+
+    // NEU: Suche nach Transaktionen des Familienkontos
+    List<Transaction> findByFamilyWalletId(UUID familyWalletId);
 }
