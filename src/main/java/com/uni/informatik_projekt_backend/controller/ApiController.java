@@ -58,7 +58,8 @@ public class ApiController {
     private void verifyUserBelongsToFamily(UUID familyId) {
         User currentUser = getCurrentUser();
         if (currentUser.getFamilyId() == null || !currentUser.getFamilyId().equals(familyId)) {
-            throw new RuntimeException("Access denied: You don't belong to this family");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Access denied: You don't belong to this family");
         }
     }
 
@@ -116,10 +117,22 @@ public class ApiController {
 
     @PostMapping("/transactions")
     public ResponseEntity<Transaction> createTransaction(@RequestBody Transaction tx) {
+        if (tx.getWalletId() == null || tx.getFamilyWalletId() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Both walletId and familyWalletId are required");
+        }
         var wallet = walletRepository.findById(tx.getWalletId())
-                .orElseThrow(() -> new RuntimeException("Wallet not found"));
-        verifyUserBelongsToFamily(wallet.getFamilyId());
-        tx.setFamilyId(wallet.getFamilyId());
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Wallet not found"));
+        var familyWallet = familyWalletRepository.findById(tx.getFamilyWalletId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Family wallet not found"));
+        if (!wallet.getFamilyId().equals(familyWallet.getFamilyId())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Personal and family wallets must belong to the same family");
+        }
+        verifyUserBelongsToFamily(familyWallet.getFamilyId());
+        tx.setWalletId(wallet.getId());
+        tx.setFamilyWalletId(familyWallet.getId());
+        tx.setFamilyId(familyWallet.getFamilyId());
         tx.setId(null);
         tx.setKind(tx.getKind() != null ? tx.getKind() : "manual");
         return ResponseEntity.ok(transactionRepository.save(tx));
