@@ -77,6 +77,12 @@ public class ApiController {
         return savedFamily;
     }
 
+    @GetMapping("/users/family/{familyId}")
+    public List<User> getUsersByFamily(@PathVariable UUID familyId) {
+        verifyUserBelongsToFamily(familyId);
+        return userRepository.findByFamilyId(familyId);
+    }
+
     @GetMapping("/wallets/family/{familyId}")
     public List<Wallet> getWalletsByFamily(@PathVariable UUID familyId) {
         verifyUserBelongsToFamily(familyId);
