@@ -32,6 +32,8 @@ public class ApiController {
     @Autowired private PayoutRequestRepository payoutRequestRepository;
     @Autowired private FamilyWalletRepository familyWalletRepository;
 
+    public record CreateFamilyRequest(String name, String description) {}
+
     @GetMapping("/health")
     public String health() { return "OK"; }
 
@@ -64,13 +66,14 @@ public class ApiController {
     }
 
     @PostMapping("/families")
-    public Family createFamily(@RequestParam String name) {
+    public Family createFamily(@RequestBody CreateFamilyRequest req) {
         User currentUser = getCurrentUser();
         if (currentUser.getFamilyId() != null) {
             throw new RuntimeException("User already belongs to a family");
         }
         Family f = new Family();
-        f.setName(name);
+        f.setName(req.name());
+        f.setDescription(req.description());
         Family savedFamily = familyRepository.save(f);
         currentUser.setFamilyId(savedFamily.getId());
         userRepository.save(currentUser);
