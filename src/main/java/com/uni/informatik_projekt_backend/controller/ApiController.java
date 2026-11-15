@@ -32,6 +32,7 @@ public class ApiController {
     @Autowired private PayoutRequestRepository payoutRequestRepository;
     @Autowired private FamilyWalletRepository familyWalletRepository;
     @Autowired private ExternalTransferRepository externalTransferRepository;
+    @Autowired private InvitationRepository invitationRepository;
 
     public record CreateFamilyRequest(String name, String description) {}
 
