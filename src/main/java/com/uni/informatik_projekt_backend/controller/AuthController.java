@@ -28,7 +28,7 @@ public class AuthController {
     @Autowired private PasswordEncoder passwordEncoder;
 
     /**
-     * Client sends plaintext password over HTTPS: {"email","password","role","displayName","familyId"}
+     * Client sends plaintext password over HTTPS
      * @JsonProperty("password") on User.passwordHash maps JSON "password" -> Java field passwordHash
      * The server BCrypt-hashes it before storing. Never stores or returns plaintext.
      */
