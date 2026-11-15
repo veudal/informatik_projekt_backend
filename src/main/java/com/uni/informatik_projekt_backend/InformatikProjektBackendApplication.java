@@ -1,22 +1,18 @@
 package com.uni.informatik_projekt_backend;
 
-import java.awt.Desktop;
-import java.awt.GraphicsEnvironment;
-import java.net.URI;
-import javax.swing.JOptionPane;
-
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.context.event.EventListener;
-import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
 @SpringBootApplication
 @EnableScheduling
 public class InformatikProjektBackendApplication {
+    private static final Logger LOGGER = LogManager.getLogger(InformatikProjektBackendApplication.class);
 
     public static void main(String[] args) {
         SpringApplication.run(InformatikProjektBackendApplication.class, args);
-        System.out.println("Swagger UI available at: http://localhost:1337/swagger-ui.html");
+        LOGGER.info("Swagger UI available at: http://localhost:1337/swagger-ui.html");
     }
 }

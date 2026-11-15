@@ -1,7 +1,7 @@
 package com.uni.informatik_projekt_backend.model;
 
 import jakarta.persistence.*;
-import org.hibernate.annotations.CreationTimestamp;
+
 import java.time.Instant;
 import java.util.UUID;
 

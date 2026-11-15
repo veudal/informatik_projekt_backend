@@ -2,7 +2,8 @@ package com.uni.informatik_projekt_backend.controller;
 
 import com.uni.informatik_projekt_backend.model.Invitation;
 import com.uni.informatik_projekt_backend.model.User;
-import com.uni.informatik_projekt_backend.repository.*;
+import com.uni.informatik_projekt_backend.repository.InvitationRepository;
+import com.uni.informatik_projekt_backend.repository.UserRepository;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.logging.log4j.LogManager;
