@@ -31,8 +31,14 @@ public class ApiController {
     @Autowired private RecurringTransferRepository recurringTransferRepository;
     @Autowired private PayoutRequestRepository payoutRequestRepository;
     @Autowired private FamilyWalletRepository familyWalletRepository;
+    @Autowired private ExternalTransferRepository externalTransferRepository;
 
     public record CreateFamilyRequest(String name, String description) {}
+
+    /** direction: "deposit" (Bank -> Familienkonto) oder "withdrawal" (Familienkonto -> Bank). */
+    public record ExternalTransferRequest(String direction, Long amountCents, String bankName, String note) {}
+
+    public record MemberTransferRequest(UUID fromWalletId, UUID toWalletId, Long amountCents, String note) {}
 
     @GetMapping("/health")
     public String health() { return "OK"; }
@@ -164,6 +170,108 @@ public class ApiController {
         familyWalletRepository.save(familyWallet);
 
         return ResponseEntity.ok(savedTx);
+    }
+
+    // Überweisung zwischen zwei Einzelkonten derselben Familie.
+    // Es entstehen zwei Buchungen: Abbuchung beim Sender, Gutschrift beim Empfänger.
+    @PostMapping("/transactions/member-transfer")
+    public ResponseEntity<List<Transaction>> createMemberTransfer(@RequestBody MemberTransferRequest req) {
+        if (req.fromWalletId() == null || req.toWalletId() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "fromWalletId and toWalletId are required");
+        }
+        if (req.fromWalletId().equals(req.toWalletId())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Sender and recipient must differ");
+        }
+        if (req.amountCents() == null || req.amountCents() <= 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "amountCents must be positive");
+        }
+        var from = walletRepository.findById(req.fromWalletId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Sender wallet not found"));
+        var to = walletRepository.findById(req.toWalletId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Recipient wallet not found"));
+        if (!from.getFamilyId().equals(to.getFamilyId())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Both wallets must belong to the same family");
+        }
+        verifyUserBelongsToFamily(from.getFamilyId());
+
+        // transactions.family_wallet_id ist NOT NULL -> Familienkonto der Familie als Referenz verwenden
+        var familyWallet = familyWalletRepository.findByFamilyId(from.getFamilyId()).stream().findFirst()
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.CONFLICT,
+                        "Family has no family wallet yet"));
+
+        UUID createdBy = getCurrentUser().getId();
+        String note = req.note() != null && !req.note().isBlank() ? req.note() : "Überweisung";
+
+        Transaction debit = new Transaction();
+        debit.setWalletId(from.getId());
+        debit.setFamilyWalletId(familyWallet.getId());
+        debit.setFamilyId(from.getFamilyId());
+        debit.setAmountCents(-req.amountCents());
+        debit.setKind("member_transfer");
+        debit.setNote(note);
+        debit.setCreatedBy(createdBy);
+
+        Transaction credit = new Transaction();
+        credit.setWalletId(to.getId());
+        credit.setFamilyWalletId(familyWallet.getId());
+        credit.setFamilyId(to.getFamilyId());
+        credit.setAmountCents(req.amountCents());
+        credit.setKind("member_transfer");
+        credit.setNote(note);
+        credit.setCreatedBy(createdBy);
+
+        return ResponseEntity.ok(transactionRepository.saveAll(List.of(debit, credit)));
+    }
+
+    // Simulierte Ein-/Auszahlungen zwischen Familienkonto und externer Bank
+    @GetMapping("/external-transfers/family-wallet/{familyWalletId}")
+    public List<ExternalTransfer> getExternalTransfers(@PathVariable UUID familyWalletId) {
+        var familyWallet = familyWalletRepository.findById(familyWalletId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Family wallet not found"));
+        verifyUserBelongsToFamily(familyWallet.getFamilyId());
+        return externalTransferRepository.findByFamilyWalletId(familyWalletId);
+    }
+
+    @PostMapping("/family-wallets/{familyWalletId}/external-transfer")
+    public ResponseEntity<ExternalTransfer> createExternalTransfer(@PathVariable UUID familyWalletId,
+                                                                   @RequestBody ExternalTransferRequest req) {
+        var familyWallet = familyWalletRepository.findById(familyWalletId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Family wallet not found"));
+        verifyUserBelongsToFamily(familyWallet.getFamilyId());
+
+        if (req.amountCents() == null || req.amountCents() <= 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "amountCents must be positive");
+        }
+        if (req.bankName() == null || req.bankName().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "bankName is required");
+        }
+        boolean deposit;
+        if ("deposit".equalsIgnoreCase(req.direction())) {
+            deposit = true;
+        } else if ("withdrawal".equalsIgnoreCase(req.direction())) {
+            deposit = false;
+        } else {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "direction must be 'deposit' or 'withdrawal'");
+        }
+
+        long currentBalance = familyWallet.getBalanceCents() != null ? familyWallet.getBalanceCents() : 0L;
+        if (!deposit && req.amountCents() > currentBalance) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Insufficient balance in family wallet");
+        }
+
+        ExternalTransfer transfer = new ExternalTransfer();
+        transfer.setFamilyWalletId(familyWallet.getId());
+        transfer.setFamilyId(familyWallet.getFamilyId());
+        transfer.setAmountCents(deposit ? req.amountCents() : -req.amountCents());
+        transfer.setBankName(req.bankName().trim());
+        transfer.setNote(req.note());
+        transfer.setCreatedBy(getCurrentUser().getId());
+        ExternalTransfer saved = externalTransferRepository.save(transfer);
+
+        familyWallet.setBalanceCents(currentBalance + saved.getAmountCents());
+        familyWalletRepository.save(familyWallet);
+
+        return ResponseEntity.ok(saved);
     }
 
     // Goals endpoints
