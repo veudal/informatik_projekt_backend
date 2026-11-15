@@ -309,7 +309,23 @@ public class ApiController {
     @PostMapping("/goals")
     public ResponseEntity<Goal> createGoal(@RequestBody Goal goal) {
         verifyUserBelongsToFamily(goal.getFamilyId());
+        if (goal.getGoalName() == null || goal.getGoalName().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "goalName is required");
+        }
+        if (goal.getTargetCents() == null || goal.getTargetCents() <= 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "targetCents must be positive");
+        }
+        // Teilnehmer müssen Mitglieder derselben Familie sein
+        var familyMemberIds = userRepository.findByFamilyId(goal.getFamilyId()).stream()
+                .map(User::getId)
+                .collect(java.util.stream.Collectors.toSet());
+        if (!familyMemberIds.containsAll(goal.getParticipantIds())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "All participants must belong to the family");
+        }
         goal.setId(null);
+        goal.setGoalName(goal.getGoalName().trim());
+        goal.setOwnerId(getCurrentUser().getId());
         goal.setStatus(goal.getStatus() != null ? goal.getStatus() : "active");
         goal.setCurrentCents(0L);
         return ResponseEntity.ok(goalRepository.save(goal));

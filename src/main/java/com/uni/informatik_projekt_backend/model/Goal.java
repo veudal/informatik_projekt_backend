@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import org.hibernate.annotations.CreationTimestamp;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
 
 @Entity
@@ -39,7 +41,21 @@ public class Goal {
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
+    /** User-IDs der Familienmitglieder, die an diesem Ziel teilnehmen. */
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "goal_participants", joinColumns = @JoinColumn(name = "goal_id"))
+    @Column(name = "user_id", nullable = false)
+    private Set<UUID> participantIds = new HashSet<>();
+
     public Goal() {}
+
+    public Set<UUID> getParticipantIds() {
+        return participantIds;
+    }
+
+    public void setParticipantIds(Set<UUID> participantIds) {
+        this.participantIds = participantIds != null ? participantIds : new HashSet<>();
+    }
 
     public UUID getId() {
         return id;
