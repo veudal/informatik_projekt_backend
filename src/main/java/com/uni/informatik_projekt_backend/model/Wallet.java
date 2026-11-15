@@ -40,6 +40,18 @@ public class Wallet {
 
     public Wallet() {}
 
+    /** Neues, leeres Einzelkonto für ein Familienmitglied. */
+    public static Wallet newMemberWallet(UUID familyId, UUID ownerId) {
+        Wallet wallet = new Wallet();
+        wallet.setFamilyId(familyId);
+        wallet.setOwnerId(ownerId);
+        wallet.setKind("member");
+        wallet.setName("Spending");
+        wallet.setCurrency("EUR");
+        wallet.setBalanceCents(0L);
+        return wallet;
+    }
+
     public UUID getId() {
         return id;
     }

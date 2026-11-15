@@ -2,7 +2,9 @@ package com.uni.informatik_projekt_backend.controller;
 
 import com.uni.informatik_projekt_backend.model.Invitation;
 import com.uni.informatik_projekt_backend.model.User;
+import com.uni.informatik_projekt_backend.model.Wallet;
 import com.uni.informatik_projekt_backend.repository.InvitationRepository;
+import com.uni.informatik_projekt_backend.repository.WalletRepository;
 import com.uni.informatik_projekt_backend.repository.UserRepository;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import org.apache.commons.lang3.RandomStringUtils;
@@ -35,6 +37,8 @@ public class InvitationController {
     private UserRepository userRepository;
     @Autowired
     private InvitationRepository invitationRepository;
+    @Autowired
+    private WalletRepository walletRepository;
 
     /**
      * Performs an action regarding the user, by first checking whether
@@ -163,6 +167,8 @@ public class InvitationController {
             if (body.accept) {
                 child.setFamilyId(user.getFamilyId());
                 child = this.userRepository.save(child);
+                // Neues Mitglied bekommt direkt sein eigenes Einzelkonto
+                this.walletRepository.save(Wallet.newMemberWallet(child.getFamilyId(), child.getId()));
                 invitation.setRedeemStatus(Invitation.REDEEM_STATUS_ACCEPTED);
             } else {
                 invitation.setRedeemStatus(Invitation.REDEEM_STATUS_DENIED);

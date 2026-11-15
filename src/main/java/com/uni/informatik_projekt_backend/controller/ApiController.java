@@ -10,6 +10,9 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -69,6 +72,7 @@ public class ApiController {
         }
     }
 
+    @Transactional
     @PostMapping("/families")
     public Family createFamily(@RequestBody CreateFamilyRequest req) {
         User currentUser = getCurrentUser();
@@ -81,6 +85,20 @@ public class ApiController {
         Family savedFamily = familyRepository.save(f);
         currentUser.setFamilyId(savedFamily.getId());
         userRepository.save(currentUser);
+
+        // Familienkonto direkt mit anlegen
+        FamilyWallet familyWallet = new FamilyWallet();
+        familyWallet.setFamilyId(savedFamily.getId());
+        familyWallet.setKind("family");
+        familyWallet.setName("Familienkonto " + savedFamily.getName());
+        familyWallet.setCurrency("EUR");
+        familyWallet.setBalanceCents(0L);
+        familyWallet.setCreatedAt(Instant.now());
+        familyWalletRepository.save(familyWallet);
+
+        // Einzelkonto für den Ersteller anlegen
+        walletRepository.save(Wallet.newMemberWallet(savedFamily.getId(), currentUser.getId()));
+
         return savedFamily;
     }
 
@@ -150,6 +168,17 @@ public class ApiController {
         }
         verifyUserBelongsToFamily(familyWallet.getFamilyId());
 
+        // Nur Überweisungen Familienkonto -> Einzelkonto erlaubt (Betrag = Gutschrift beim Einzelkonto).
+        // Einzelkonten können nicht mehr auf das Familienkonto überweisen.
+        if (tx.getAmountCents() == null || tx.getAmountCents() <= 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Only transfers from the family wallet to member wallets are allowed (amountCents must be positive)");
+        }
+        long available = familyWallet.getBalanceCents() != null ? familyWallet.getBalanceCents() : 0L;
+        if (tx.getAmountCents() > available) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Insufficient balance in family wallet");
+        }
+
         User currentUser = getCurrentUser();
         tx.setCreatedBy(currentUser.getId());
 
@@ -157,14 +186,12 @@ public class ApiController {
         tx.setFamilyWalletId(familyWallet.getId());
         tx.setFamilyId(familyWallet.getFamilyId());
         tx.setId(null);
-        tx.setKind(tx.getKind() != null ? tx.getKind() : "manual");
+        tx.setKind("transfer");
 
         Transaction savedTx = transactionRepository.save(tx);
 
-        // NEU: Kontostand des Familienkontos automatisch aktualisieren!
-        long currentBalance = familyWallet.getBalanceCents() != null ? familyWallet.getBalanceCents() : 0L;
-        // Da eine Überweisung vom User negativ ist (z.B. -3200), erhöht sich das Guthaben des Familienkontos (Minus und Minus = Plus)
-        familyWallet.setBalanceCents(currentBalance - savedTx.getAmountCents());
+        // Kontostand des Familienkontos reduzieren (Gutschrift beim Einzelkonto = Abfluss beim Familienkonto)
+        familyWallet.setBalanceCents(available - savedTx.getAmountCents());
         familyWalletRepository.save(familyWallet);
 
         return ResponseEntity.ok(savedTx);
