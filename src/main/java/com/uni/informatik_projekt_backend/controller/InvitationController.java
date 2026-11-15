@@ -80,8 +80,8 @@ public class InvitationController {
      */
     @Scheduled(fixedRate = 1, timeUnit = TimeUnit.HOURS)
     public void cleanInvitations() {
-        //int count = this.invitationRepository.deleteBefore(Instant.now().minus(30, ChronoUnit.MINUTES));
-        //LOGGER.debug("Cleaned {} invitation entries older than 30 minutes.", count);
+        int count = this.invitationRepository.deleteBefore(Instant.now().minus(30, ChronoUnit.MINUTES));
+        LOGGER.debug("Cleaned {} invitation entries older than 30 minutes.", count);
     }
 
     @PostMapping("/create-invitation")
