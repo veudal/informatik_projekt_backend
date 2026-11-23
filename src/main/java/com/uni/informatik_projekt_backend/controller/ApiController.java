@@ -6,14 +6,23 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jws;
+
+import java.io.IOException;
+import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @SecurityRequirement(name = "bearerAuth")
@@ -100,6 +109,17 @@ public class ApiController {
         walletRepository.save(Wallet.newMemberWallet(savedFamily.getId(), currentUser.getId()));
 
         return savedFamily;
+    }
+
+    public record MeResponse(
+            UUID id, String email, String firstName, String lastName,
+            String displayName, LocalDate birthDate, String role, UUID familyId) {}
+
+    @GetMapping("/users/me")
+    public MeResponse me() {
+        User u = getCurrentUser();
+        return new MeResponse(u.getId(), u.getEmail(), u.getFirstName(), u.getLastName(),
+                u.getDisplayName(), u.getBirthDate(), u.getRole(), u.getFamilyId());
     }
 
     @GetMapping("/users/family/{familyId}")
@@ -340,6 +360,7 @@ public class ApiController {
     @PostMapping("/goal-contributions")
     public ResponseEntity<GoalContribution> createContribution(@RequestBody GoalContribution contribution) {
         contribution.setId(null);
+        contribution.setUserId(getCurrentUser().getId());
         return ResponseEntity.ok(goalContributionRepository.save(contribution));
     }
 

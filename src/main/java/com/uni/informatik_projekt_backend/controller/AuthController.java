@@ -76,12 +76,13 @@ public class AuthController {
         }
     }
 
-    /**
-     * Requires valid JWT. Lists all users (passwords never exposed).
-     */
-    @SecurityRequirement(name = "bearerAuth")
-    @GetMapping("/users")
-    public ResponseEntity<List<User>> getUsers() {
-        return ResponseEntity.ok(userRepository.findAll());
-    }
+//
+//    /**
+//     * Requires valid JWT. Lists all users (passwords never exposed).
+//     */
+//    @SecurityRequirement(name = "bearerAuth")
+//    @GetMapping("/users")
+//    public ResponseEntity<List<User>> getUsers() {
+//        return ResponseEntity.ok(userRepository.findAll());
+//    }
 }

@@ -30,6 +30,9 @@ public class User {
     @Column(name = "last_name", nullable = false)
     private String lastName;
 
+    @Column(name = "image_path", nullable = false)
+    private String imagePath;
+
     @Column(nullable = false)
     private String role; // 'admin', 'active', or 'passive'
 

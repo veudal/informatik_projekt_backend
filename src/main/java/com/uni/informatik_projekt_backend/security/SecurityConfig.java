@@ -38,22 +38,23 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        .requestMatchers(
-                                "/error",
-                                "/api/auth/register",
-                                "/api/auth/login",
-                                "/api/auth/check-email",
-                                "/api/families",
-                                "/api/families/count",
-                                "/api/health",
-                                "/v3/api-docs/**",
-                                "/swagger-ui/**",
-                                "/swagger-ui.html"
-                        ).permitAll()
-                        .anyRequest().authenticated()
-                )
+                .authorizeHttpRequests(auth -> auth.anyRequest().permitAll())
+//                .authorizeHttpRequests(auth -> auth
+//                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+//                        .requestMatchers(
+//                                "/error",
+//                                "/api/auth/register",
+//                                "/api/auth/login",
+//                                "/api/auth/check-email",
+//                                "/api/families",
+//                                "/api/families/count",
+//                                "/api/health",
+//                                "/v3/api-docs/**",
+//                                "/swagger-ui/**",
+//                                "/swagger-ui.html"
+//                        ).permitAll()
+//                        .anyRequest().authenticated()
+//                )
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
