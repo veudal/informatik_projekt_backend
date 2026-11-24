@@ -1,9 +1,6 @@
 package com.uni.informatik_projekt_backend.model;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.Instant;
@@ -12,11 +9,6 @@ import java.util.UUID;
 @Entity
 @Table(name = "invitations")
 public class Invitation {
-    public static final String REDEEM_STATUS_REDEEMABLE = "REDEEMABLE";
-    public static final String REDEEM_STATUS_PENDING = "PENDING";
-    public static final String REDEEM_STATUS_ACCEPTED = "ACCEPTED";
-    public static final String REDEEM_STATUS_DENIED = "DENIED";
-
     @Id
     @Column(name = "id")
     private String id;
@@ -27,8 +19,9 @@ public class Invitation {
     @Column(name = "redeemer_id")
     private UUID redeemerId;
 
-    @Column(name = "redeem_status")
-    private String redeemStatus;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status")
+    private InvitationStatus status;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
@@ -46,8 +39,8 @@ public class Invitation {
         return redeemerId;
     }
 
-    public String getRedeemStatus() {
-        return redeemStatus;
+    public InvitationStatus getStatus() {
+        return status;
     }
 
     public Instant getCreatedAt() {
@@ -66,7 +59,7 @@ public class Invitation {
         this.redeemerId = redeemerId;
     }
 
-    public void setRedeemStatus(String redeemStatus) {
-        this.redeemStatus = redeemStatus;
+    public void setStatus(InvitationStatus status) {
+        this.status = status;
     }
 }

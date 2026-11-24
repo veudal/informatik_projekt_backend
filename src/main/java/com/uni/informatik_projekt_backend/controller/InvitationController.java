@@ -1,6 +1,7 @@
 package com.uni.informatik_projekt_backend.controller;
 
 import com.uni.informatik_projekt_backend.model.Invitation;
+import com.uni.informatik_projekt_backend.model.InvitationStatus;
 import com.uni.informatik_projekt_backend.model.User;
 import com.uni.informatik_projekt_backend.model.Wallet;
 import com.uni.informatik_projekt_backend.repository.InvitationRepository;
@@ -30,9 +31,6 @@ import java.util.function.Function;
 @RequestMapping("/api/family/invite")
 public class InvitationController {
     private static final Logger LOGGER = LogManager.getLogger(InvitationController.class);
-    private static final String POLL_STATUS_PENDING = "pending";
-    private static final String POLL_STATUS_ACCEPTED = "accepted";
-    private static final String POLL_STATUS_DENIED = "denied";
     @Autowired
     private UserRepository userRepository;
     @Autowired
@@ -47,7 +45,7 @@ public class InvitationController {
     private <T> ResponseEntity<T> withAuthorizedUser(Function<User, ResponseEntity<T>> function) {
         try {
             String email = SecurityContextHolder.getContext().getAuthentication().getName();
-            return userRepository.findByEmail(email).map(function).orElseThrow();
+            return this.userRepository.findByEmail(email).map(function).orElseThrow();
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
@@ -85,8 +83,9 @@ public class InvitationController {
      */
     @Scheduled(fixedRate = 1, timeUnit = TimeUnit.HOURS)
     public void cleanInvitations() {
-        int count = this.invitationRepository.deleteBefore(Instant.now().minus(30, ChronoUnit.MINUTES));
-        LOGGER.debug("Cleaned {} invitation entries older than 30 minutes.", count);
+        int minutes = 15;
+        int count = this.invitationRepository.deleteBefore(Instant.now().minus(minutes, ChronoUnit.MINUTES));
+        LOGGER.debug("Cleaned {} invitation entries older than {} minutes.", count, minutes);
     }
 
     @PostMapping("/create-invitation")
@@ -113,7 +112,7 @@ public class InvitationController {
             Invitation invitation = new Invitation();
             invitation.setId(id);
             invitation.setIssuerId(user.getId());
-            invitation.setRedeemStatus(Invitation.REDEEM_STATUS_REDEEMABLE);
+            invitation.setStatus(InvitationStatus.REDEEMABLE);
             invitation = this.invitationRepository.save(invitation);
 
             return ResponseEntity
@@ -125,7 +124,7 @@ public class InvitationController {
     @GetMapping("/poll-redeemer/{id}")
     public ResponseEntity<?> pollRedeemer(@PathVariable String id) {
         return this.withAuthorizedIssuer(id, (user, invitation) -> {
-            if (!Invitation.REDEEM_STATUS_PENDING.equals(invitation.getRedeemStatus())) {
+            if (!InvitationStatus.PENDING.equals(invitation.getStatus())) {
                 return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
             }
 
@@ -137,19 +136,32 @@ public class InvitationController {
             User redeemer = this.userRepository.getReferenceById(invitation.getRedeemerId());
 
             return ResponseEntity.ok(Map.of(
-                    "id", redeemer.getId(),
                     "display_name", redeemer.getDisplayName()
             ));
         });
     }
 
-    public record RespondRedeemerBody(boolean accept) {}
+    enum InvitationResponse {
+        ACCEPT,
+        DENY,
+        EXPIRE;
+    }
+
+    public record RespondRedeemerBody(InvitationResponse response) {
+    }
 
     @PostMapping("/respond-redeemer/{id}")
     public ResponseEntity<Void> respondRedeemer(@PathVariable String id, @RequestBody RespondRedeemerBody body) {
         return this.withAuthorizedIssuer(id, (user, invitation) -> {
-            if (!Invitation.REDEEM_STATUS_PENDING.equals(invitation.getRedeemStatus())) {
-                // user cannot accept or deny if nobody
+            if (InvitationStatus.REDEEMABLE.equals(invitation.getStatus()) && body.response == InvitationResponse.EXPIRE) {
+                // code issuer can mark the response as
+                // expired in order to report that he is no
+                // longer listening for redeemers.
+                invitation.setStatus(InvitationStatus.EXPIRED);
+                invitation = this.invitationRepository.save(invitation);
+                return ResponseEntity.ok().build();
+            } else if (!InvitationStatus.PENDING.equals(invitation.getStatus())) {
+                // user cannot respond if nobody
                 // has redeemed the invitation
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
             }
@@ -159,22 +171,33 @@ public class InvitationController {
             if (child.getFamilyId() != null) {
                 // client has somehow managed to get accepted
                 // into another family in the meantime
-                invitation.setRedeemStatus(Invitation.REDEEM_STATUS_DENIED);
+                invitation.setStatus(InvitationStatus.INVALIDATED);
                 invitation = this.invitationRepository.save(invitation);
                 return ResponseEntity.status(HttpStatus.CONFLICT).build();
             }
 
-            if (body.accept) {
-                child.setFamilyId(user.getFamilyId());
-                child = this.userRepository.save(child);
-                // Neues Mitglied bekommt direkt sein eigenes Einzelkonto
-                this.walletRepository.save(Wallet.newMemberWallet(child.getFamilyId(), child.getId()));
-                invitation.setRedeemStatus(Invitation.REDEEM_STATUS_ACCEPTED);
-            } else {
-                invitation.setRedeemStatus(Invitation.REDEEM_STATUS_DENIED);
+            switch (body.response) {
+                case ACCEPT:
+                    child.setFamilyId(user.getFamilyId());
+                    child = this.userRepository.save(child);
+                    invitation.setStatus(InvitationStatus.ACCEPTED);
+                    invitation = this.invitationRepository.save(invitation);
+                    // Neues Mitglied bekommt direkt sein eigenes Einzelkonto
+                    this.walletRepository.save(Wallet.newMemberWallet(child.getFamilyId(), child.getId()));
+                    break;
+                case DENY:
+                    invitation.setStatus(InvitationStatus.DENIED);
+                    invitation = this.invitationRepository.save(invitation);
+                    break;
+                case EXPIRE:
+                    invitation.setStatus(InvitationStatus.EXPIRED);
+                    invitation = this.invitationRepository.save(invitation);
+                case null:
+                default:
+                    invitation.setStatus(InvitationStatus.INVALIDATED);
+                    invitation = this.invitationRepository.save(invitation);
+                    break;
             }
-
-            invitation = this.invitationRepository.save(invitation);
 
             return ResponseEntity.ok().build();
         });
@@ -196,12 +219,12 @@ public class InvitationController {
 
             Invitation invitation = maybeInvitation.get();
 
-            if (!invitation.getRedeemStatus().equals(Invitation.REDEEM_STATUS_REDEEMABLE)) {
+            if (!invitation.getStatus().equals(InvitationStatus.REDEEMABLE)) {
                 // invitation already in use
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
             }
 
-            invitation.setRedeemStatus(Invitation.REDEEM_STATUS_PENDING);
+            invitation.setStatus(InvitationStatus.PENDING);
             invitation.setRedeemerId(user.getId());
             invitation = this.invitationRepository.save(invitation);
 
@@ -218,7 +241,7 @@ public class InvitationController {
                 // check if user was picked up into a family with
                 // the invitation record already being deleted
                 if (user.getFamilyId() != null) {
-                    return ResponseEntity.ok(Map.of("status", POLL_STATUS_ACCEPTED));
+                    return ResponseEntity.ok(Map.of("status", InvitationStatus.ACCEPTED.toString()));
                 } else {
                     return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
                 }
@@ -231,13 +254,7 @@ public class InvitationController {
                     return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
                 }
 
-                String status = switch (invitation.getRedeemStatus()) {
-                    case Invitation.REDEEM_STATUS_ACCEPTED -> POLL_STATUS_ACCEPTED;
-                    case Invitation.REDEEM_STATUS_PENDING -> POLL_STATUS_PENDING;
-                    default -> POLL_STATUS_DENIED;
-                };
-
-                return ResponseEntity.ok(Map.of("status", status));
+                return ResponseEntity.ok(Map.of("status", invitation.getStatus().toString()));
             }
         });
     }
