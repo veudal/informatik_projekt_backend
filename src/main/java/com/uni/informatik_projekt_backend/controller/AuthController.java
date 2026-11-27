@@ -37,12 +37,11 @@ public class AuthController {
         if (user.getEmail() != null && userRepository.existsByEmail(user.getEmail())) {
             return ResponseEntity.badRequest().body(Map.of("error", "Email already registered"));
         }
-        if (!user.getRole().equals("admin") && !user.getRole().equals("active") && !user.getRole().equals("passive")) {
-            return ResponseEntity.badRequest().body(Map.of("error", "Role must be admin, active, or passive"));
-        }
+
         // passwordHash temporarily holds the plaintext password from the JSON request
         String plainPassword = user.getPasswordHash();
         user.setPasswordHash(passwordEncoder.encode(plainPassword));
+        user.setRole(null); // User has no role until creating or joining a family
         User saved = userRepository.save(user);
         UserDetails details = userDetailsService.loadUserByUsername(user.getEmail());
         return ResponseEntity.ok(Map.of("token", jwtUtil.generateToken(details), "user", saved));
