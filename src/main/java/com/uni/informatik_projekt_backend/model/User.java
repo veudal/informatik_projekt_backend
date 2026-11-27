@@ -33,8 +33,8 @@ public class User {
     @Column(name = "image_path", nullable = false)
     private String imagePath;
 
-    @Column(nullable = false)
-    private String role; // 'admin', 'active', or 'passive'
+    @Column(nullable = true)
+    private String role; // 'admin', 'active', 'passive' or null
 
     @Column(name = "birth_date")
     private LocalDate birthDate;
