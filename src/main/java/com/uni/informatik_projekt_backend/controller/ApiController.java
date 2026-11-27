@@ -6,23 +6,14 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.http.*;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
-import org.springframework.transaction.annotation.Transactional;
-
 import java.time.Instant;
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.Jws;
-
-import java.io.IOException;
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 @SecurityRequirement(name = "bearerAuth")
@@ -30,33 +21,54 @@ import java.util.UUID;
 @RequestMapping("/api")
 public class ApiController {
 
-    @Autowired private FamilyRepository familyRepository;
-    @Autowired private WalletRepository walletRepository;
-    @Autowired private TransactionRepository transactionRepository;
-    @Autowired private UserRepository userRepository;
-    @Autowired private GoalRepository goalRepository;
-    @Autowired private GoalContributionRepository goalContributionRepository;
-    @Autowired private TaskRepository taskRepository;
-    @Autowired private RecurringTransferRepository recurringTransferRepository;
-    @Autowired private PayoutRequestRepository payoutRequestRepository;
-    @Autowired private FamilyWalletRepository familyWalletRepository;
-    @Autowired private ExternalTransferRepository externalTransferRepository;
-    @Autowired private InvitationRepository invitationRepository;
+    @Autowired
+    private GoalProgressRepository goalProgressRepository;
+    @Autowired
+    private FamilyRepository familyRepository;
+    @Autowired
+    private WalletRepository walletRepository;
+    @Autowired
+    private TransactionRepository transactionRepository;
+    @Autowired
+    private UserRepository userRepository;
+    @Autowired
+    private GoalRepository goalRepository;
+    @Autowired
+    private GoalContributionRepository goalContributionRepository;
+    @Autowired
+    private TaskRepository taskRepository;
+    @Autowired
+    private RecurringTransferRepository recurringTransferRepository;
+    @Autowired
+    private PayoutRequestRepository payoutRequestRepository;
+    @Autowired
+    private FamilyWalletRepository familyWalletRepository;
+    @Autowired
+    private ExternalTransferRepository externalTransferRepository;
+    @Autowired
+    private InvitationRepository invitationRepository;
 
-    public record CreateFamilyRequest(String name, String description) {}
+    public record CreateFamilyRequest(String name, String description) {
+    }
 
-    /** direction: "deposit" (Bank -> Familienkonto) oder "withdrawal" (Familienkonto -> Bank). */
-    public record ExternalTransferRequest(String direction, Long amountCents, String bankName, String note) {}
+    /**
+     * direction: "deposit" (Bank -> Familienkonto) oder "withdrawal" (Familienkonto -> Bank).
+     */
+    public record ExternalTransferRequest(String direction, Long amountCents, String bankName, String note) {
+    }
 
-    public record MemberTransferRequest(UUID fromWalletId, UUID toWalletId, Long amountCents, String note) {}
+    public record MemberTransferRequest(UUID fromWalletId, UUID toWalletId, Long amountCents, String note) {
+    }
 
     @GetMapping("/health")
-    public String health() { return "OK"; }
+    public String health() {
+        return "OK";
+    }
 
     @GetMapping("/family")
     public Family getMyFamily() {
         var id = getCurrentUser().getFamilyId();
-        if(id == null){
+        if (id == null) {
             return null;
         }
         return familyRepository.findById(id).orElse(null);
@@ -113,7 +125,8 @@ public class ApiController {
 
     public record MeResponse(
             UUID id, String email, String firstName, String lastName,
-            String displayName, LocalDate birthDate, String role, UUID familyId) {}
+            String displayName, LocalDate birthDate, String role, UUID familyId) {
+    }
 
     @GetMapping("/users/me")
     public MeResponse me() {
@@ -319,11 +332,10 @@ public class ApiController {
         return ResponseEntity.ok(saved);
     }
 
-    // Goals endpoints
     @GetMapping("/goals/family/{familyId}")
-    public List<Goal> getGoalsByFamily(@PathVariable UUID familyId) {
+    public List<GoalProgress> getGoalsByFamily(@PathVariable UUID familyId) {
         verifyUserBelongsToFamily(familyId);
-        return goalRepository.findByFamilyId(familyId);
+        return goalProgressRepository.findByFamilyId(familyId);
     }
 
     @PostMapping("/goals")
@@ -347,7 +359,6 @@ public class ApiController {
         goal.setGoalName(goal.getGoalName().trim());
         goal.setOwnerId(getCurrentUser().getId());
         goal.setStatus(goal.getStatus() != null ? goal.getStatus() : "active");
-        goal.setCurrentCents(0L);
         return ResponseEntity.ok(goalRepository.save(goal));
     }
 

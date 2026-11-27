@@ -2,6 +2,7 @@ package com.uni.informatik_projekt_backend.model;
 
 import jakarta.persistence.*;
 import org.hibernate.annotations.CreationTimestamp;
+
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.HashSet;
@@ -34,20 +35,20 @@ public class Goal {
     @Column(name = "deadline")
     private LocalDate deadline;
 
-    @Column(name = "current_cents")
-    private Long currentCents;
-
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
-    /** User-IDs der Familienmitglieder, die an diesem Ziel teilnehmen. */
+    /**
+     * User-IDs der Familienmitglieder, die an diesem Ziel teilnehmen.
+     */
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "goal_participants", joinColumns = @JoinColumn(name = "goal_id"))
     @Column(name = "user_id", nullable = false)
     private Set<UUID> participantIds = new HashSet<>();
 
-    public Goal() {}
+    public Goal() {
+    }
 
     public Set<UUID> getParticipantIds() {
         return participantIds;
@@ -111,14 +112,6 @@ public class Goal {
 
     public void setDeadline(LocalDate deadline) {
         this.deadline = deadline;
-    }
-
-    public Long getCurrentCents() {
-        return currentCents;
-    }
-
-    public void setCurrentCents(Long currentCents) {
-        this.currentCents = currentCents;
     }
 
     public Instant getCreatedAt() {
